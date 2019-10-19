@@ -1,0 +1,322 @@
+<html>
+
+<head>
+<meta http-equiv=Content-Type content="text/html; charset=windows-1252">
+<meta name=Generator content="Microsoft Word 15 (filtered)">
+<style>
+<!--
+ /* Font Definitions */
+ @font-face
+	{font-family:"Cambria Math";
+	panose-1:2 4 5 3 5 4 6 3 2 4;}
+@font-face
+	{font-family:Calibri;
+	panose-1:2 15 5 2 2 2 4 3 2 4;}
+ /* Style Definitions */
+ p.MsoNormal, li.MsoNormal, div.MsoNormal
+	{margin-top:0in;
+	margin-right:0in;
+	margin-bottom:8.0pt;
+	margin-left:0in;
+	line-height:107%;
+	font-size:11.0pt;
+	font-family:"Calibri",sans-serif;}
+a:link, span.MsoHyperlink
+	{color:blue;
+	text-decoration:underline;}
+a:visited, span.MsoHyperlinkFollowed
+	{color:#954F72;
+	text-decoration:underline;}
+.MsoChpDefault
+	{font-family:"Calibri",sans-serif;}
+.MsoPapDefault
+	{margin-bottom:8.0pt;
+	line-height:107%;}
+@page WordSection1
+	{size:8.5in 11.0in;
+	margin:1.0in 1.0in 1.0in 1.0in;}
+div.WordSection1
+	{page:WordSection1;}
+-->
+</style>
+
+</head>
+
+<body lang=EN-US link=blue vlink="#954F72">
+
+<div class=WordSection1>
+
+<p class=MsoNormal>---</p>
+
+<p class=MsoNormal>title: &quot; Practical Machine Learning - Prediction
+Assignment Writeup&quot;</p>
+
+<p class=MsoNormal>author: &quot;Ujfloss Obianumba&quot;</p>
+
+<p class=MsoNormal>date: &quot;October 17, 2019&quot;</p>
+
+<p class=MsoNormal>output: html_document</p>
+
+<p class=MsoNormal>---</p>
+
+<p class=MsoNormal>*Created with knitr*</p>
+
+<p class=MsoNormal>&nbsp;</p>
+
+<p class=MsoNormal>### 1. Executive Summary</p>
+
+<p class=MsoNormal>&nbsp;</p>
+
+<p class=MsoNormal>This is a  report of the Peer Assessment project from the
+Practical Machine Learning course. The goal of this analysis is to predict the
+manner in which the six participants performed their exercises. The machine
+learning algorithm,  uses the &quot;classe&quot; variable in the training set,
+is applied to the 20 test cases available in the test data. </p>
+
+<p class=MsoNormal>&nbsp;</p>
+
+<p class=MsoNormal>### 2. Libraries</p>
+
+<p class=MsoNormal>```{r results='hide', message=FALSE}</p>
+
+<p class=MsoNormal>library(caret)</p>
+
+<p class=MsoNormal>library(rattle)</p>
+
+<p class=MsoNormal>library(corrplot)</p>
+
+<p class=MsoNormal>```</p>
+
+<p class=MsoNormal>&nbsp;</p>
+
+<p class=MsoNormal>### 3. Load Data</p>
+
+<p class=MsoNormal>Load the dataset.</p>
+
+<p class=MsoNormal>```{r results='hide', message=FALSE}</p>
+
+<p class=MsoNormal>TrainData &lt;-
+read.csv(url(&quot;https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv&quot;),header=TRUE)</p>
+
+<p class=MsoNormal>dim(TrainData)</p>
+
+<p class=MsoNormal>TestData &lt;-
+read.csv(url(&quot;https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv&quot;),header=TRUE)</p>
+
+<p class=MsoNormal>dim(TestData)</p>
+
+<p class=MsoNormal>```</p>
+
+<p class=MsoNormal>&nbsp;</p>
+
+<p class=MsoNormal>### 4. Create a partition of the traning data set and clean
+data</p>
+
+<p class=MsoNormal>&nbsp;</p>
+
+<p class=MsoNormal>```{r  message=FALSE}</p>
+
+<p class=MsoNormal> # The training dataset is  partitioned into 2 to create a
+Training set with 70% of the data for the modeling process.  A Test set is
+created with the remaining 30% for the validations.</p>
+
+<p class=MsoNormal>set.seed(32343)</p>
+
+<p class=MsoNormal>inTrain &lt;- createDataPartition(TrainData$classe, p = 0.7,
+list = FALSE)</p>
+
+<p class=MsoNormal>trainData &lt;- TrainData[inTrain, ]</p>
+
+<p class=MsoNormal>testData &lt;- TrainData[-inTrain, ]</p>
+
+<p class=MsoNormal>dim(trainData)</p>
+
+<p class=MsoNormal>dim(testData)</p>
+
+<p class=MsoNormal># trainData and testData have a large number of NA values
+and near-zero-variance (NZV) variables. Remove both.</p>
+
+<p class=MsoNormal>NZV &lt;- nearZeroVar(trainData)</p>
+
+<p class=MsoNormal>trainData &lt;- trainData[, -NZV]</p>
+
+<p class=MsoNormal>testData  &lt;- testData[, -NZV]</p>
+
+<p class=MsoNormal>dim(trainData)</p>
+
+<p class=MsoNormal>dim(testData)</p>
+
+<p class=MsoNormal># Remove variables that are mostly NA. A threshlod of 95 %
+is selected.</p>
+
+<p class=MsoNormal>mostlyNA &lt;- sapply(trainData, function(x) mean(is.na(x)))
+&gt; 0.95</p>
+
+<p class=MsoNormal>mostlyNATest &lt;- sapply(testData, function(x)
+mean(is.na(x))) &gt; 0.95</p>
+
+<p class=MsoNormal>trainData &lt;- trainData[, mostlyNA==F]</p>
+
+<p class=MsoNormal>testData &lt;- testData[, mostlyNATest==F]</p>
+
+<p class=MsoNormal>dim(trainData)</p>
+
+<p class=MsoNormal>dim(testData)</p>
+
+<p class=MsoNormal># Remove identification only variables (columns 1 to 5)The
+highly correlated variables are shown in dark colors in the graph above. To
+make an even more compact analysis, a PCA (Principal Components Analysis) could
+be performed as a pre-processing step to the datasets. Nevertheless, as the
+correlations are quite few, this step will not be applied for this assignment.</p>
+
+<p class=MsoNormal>trainData &lt;- trainData[, -(1:5)]</p>
+
+<p class=MsoNormal>testData &lt;- testData[, -(1:5)]</p>
+
+<p class=MsoNormal>dim(trainData)</p>
+
+<p class=MsoNormal>dim(testData)</p>
+
+<p class=MsoNormal>```</p>
+
+<p class=MsoNormal>### 5. Data Analysis </p>
+
+<p class=MsoNormal>####  a)  Check correlation among variables</p>
+
+<p class=MsoNormal>&nbsp;</p>
+
+<p class=MsoNormal>```{r results='hide', message=FALSE}</p>
+
+<p class=MsoNormal>correlation &lt;- cor(trainData[, -54])</p>
+
+<p class=MsoNormal>corrplot(correlation, method=&quot;circle&quot;)</p>
+
+<p class=MsoNormal># The circles with dark colors show highly correlated
+variables in the graph above. Correlations do not seem to give any analysis
+points as they are very less.</p>
+
+<p class=MsoNormal>```</p>
+
+<p class=MsoNormal>&nbsp;</p>
+
+<p class=MsoNormal>#### b) Classification tree method</p>
+
+<p class=MsoNormal>&nbsp;</p>
+
+<p class=MsoNormal>&nbsp;</p>
+
+<p class=MsoNormal>```{r message=FALSE}</p>
+
+<p class=MsoNormal>trControl &lt;- trainControl(method=&quot;cv&quot;,
+number=5)</p>
+
+<p class=MsoNormal>model_CT &lt;- train(classe~., , method=&quot;rpart&quot;,
+data=trainData, trControl=trControl)</p>
+
+<p class=MsoNormal>fancyRpartPlot(model_CT$finalModel)</p>
+
+<p class=MsoNormal>predict_train &lt;- predict(model_CT,newdata=testData)</p>
+
+<p class=MsoNormal>confMatClassTree &lt;-
+confusionMatrix(testData$classe,predict_train)</p>
+
+<p class=MsoNormal>#Display confusion matrix and model accuracy</p>
+
+<p class=MsoNormal>confMatClassTree$table</p>
+
+<p class=MsoNormal>confMatClassTree$overall[1]</p>
+
+<p class=MsoNormal>```</p>
+
+<p class=MsoNormal>#### c)  Random forest method</p>
+
+<p class=MsoNormal>&nbsp;</p>
+
+<p class=MsoNormal>```{r message=FALSE}</p>
+
+<p class=MsoNormal>random_forest &lt;- trainControl(method=&quot;cv&quot;,
+number=3, verboseIter=FALSE)</p>
+
+<p class=MsoNormal>model_RF1 &lt;- train(classe ~ ., data=trainData, method=&quot;rf&quot;,
+trControl=random_forest)</p>
+
+<p class=MsoNormal>model_RF1$finalModel</p>
+
+<p class=MsoNormal>plot(model_RF1,main=&quot;Accuracy of Random forest model by
+number of predictors&quot;)</p>
+
+<p class=MsoNormal>predict_train &lt;- predict(model_RF1,newdata=testData)</p>
+
+<p class=MsoNormal>confMatRF &lt;-
+confusionMatrix(testData$classe,predict_train)</p>
+
+<p class=MsoNormal># Display confusion matrix and model accuracy</p>
+
+<p class=MsoNormal>confMatRF</p>
+
+<p class=MsoNormal>plot(model_RF1$finalModel)</p>
+
+<p class=MsoNormal>```</p>
+
+<p class=MsoNormal>&nbsp;</p>
+
+<p class=MsoNormal>#### d) Generated Boosted Model (GBM)</p>
+
+<p class=MsoNormal>&nbsp;</p>
+
+<p class=MsoNormal>```{r  message=FALSE}</p>
+
+<p class=MsoNormal>set.seed(12345)</p>
+
+<p class=MsoNormal>GBM &lt;- trainControl(method = &quot;repeatedcv&quot;,
+number = 5, repeats = 1)</p>
+
+<p class=MsoNormal>model_GBM  &lt;- train(classe ~ ., data=trainData, method =
+&quot;gbm&quot;, trControl = GBM, verbose = FALSE)</p>
+
+<p class=MsoNormal>model_GBM$finalModel</p>
+
+<p class=MsoNormal>predictGBM &lt;- predict(model_GBM, newdata=testData)</p>
+
+<p class=MsoNormal>confMatGBM &lt;- confusionMatrix(predictGBM,
+testData$classe)</p>
+
+<p class=MsoNormal>confMatGBM</p>
+
+<p class=MsoNormal>```</p>
+
+<p class=MsoNormal>&nbsp;</p>
+
+<p class=MsoNormal>### 6. Conclusion</p>
+
+<p class=MsoNormal>```{r message=FALSE}</p>
+
+<p class=MsoNormal># The predictive accuracies of the above methods are:</p>
+
+<p class=MsoNormal>#Classification Tree Model: 49.62 %</p>
+
+<p class=MsoNormal>#Generalized Boosted Model: 98.96 %       </p>
+
+<p class=MsoNormal>#Random Forest Model: 99.71 %</p>
+
+<p class=MsoNormal>#</p>
+
+<p class=MsoNormal>#The Random Forest model has the best accuracy and hence it
+is used for predictions on the 20 data points from the original testing
+dataset.</p>
+
+<p class=MsoNormal>predict_test &lt;- predict(model_RF1, newdata = TestData)</p>
+
+<p class=MsoNormal>predict_test</p>
+
+<p class=MsoNormal>```</p>
+
+<p class=MsoNormal>&nbsp;</p>
+
+<p class=MsoNormal>© 2019 GitHub, Inc.</p>
+
+</div>
+
+</body>
+
+</html>
